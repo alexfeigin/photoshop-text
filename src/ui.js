@@ -400,7 +400,6 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
     if (els.fillColorHex) els.fillColorHex.value = els.fillColor.value;
     syncQuickFillToBaseLayer({ els, state });
     onStateChange();
-    rerenderUI();
     scheduleRender();
   });
 
@@ -411,7 +410,6 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
     if (els.fillColor) els.fillColor.value = norm;
     syncQuickFillToBaseLayer({ els, state });
     onStateChange();
-    rerenderUI();
     scheduleRender();
   });
   els.align.addEventListener('change', () => {
@@ -507,26 +505,11 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
     if (field === 'name') {
       updateLayer(state, id, { name: target.value });
       onStateChange();
-      rerenderUI();
       return;
     }
-    if (field === 'enabled') {
-      updateLayer(state, id, { enabled: target.checked });
-      onStateChange();
-      rerenderUI();
-      scheduleRender();
-      return;
-    }
-
-    if (field === 'baseFillType') {
-      const nextType = target.value;
-      switchBaseFillType(state, nextType, els.fillColor?.value);
-      syncQuickFillToBaseLayer({ els, state });
-      onStateChange();
-      rerenderUI();
-      scheduleRender();
-      return;
-    }
+    // Avoid rerendering the entire editor on every keystroke, otherwise focus gets lost.
+    // Structural changes (like switching fill type) are handled on 'change' events below.
+    if (field === 'enabled' || field === 'baseFillType') return;
 
     if (hexFor) {
       const norm = normalizeHexColor(target.value);
@@ -557,8 +540,6 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
         els.fillColor.value = mid;
         els.fillColorHex.value = mid;
       }
-
-      rerenderUI();
       scheduleRender();
       return;
     }
@@ -621,12 +602,35 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
       els.fillColor.value = mid;
       els.fillColorHex.value = mid;
     }
-
-    rerenderUI();
     scheduleRender();
   });
 
-  els.layerEditorBody?.addEventListener('change', () => {
+  els.layerEditorBody?.addEventListener('change', (e) => {
+    const target = e.target;
+    const field = target?.getAttribute?.('data-field');
+    if (!field) return;
+
+    const id = state.selectedLayerId;
+
+    if (field === 'enabled') {
+      updateLayer(state, id, { enabled: Boolean(target.checked) });
+      onStateChange();
+      rerenderUI();
+      scheduleRender();
+      return;
+    }
+
+    if (field === 'baseFillType') {
+      const nextType = target.value;
+      switchBaseFillType(state, nextType, els.fillColor?.value);
+      syncQuickFillToBaseLayer({ els, state });
+      onStateChange();
+      rerenderUI();
+      scheduleRender();
+      return;
+    }
+
+    // For other fields: commit-time rerender keeps layer list/editor in sync without breaking typing.
     rerenderUI();
     scheduleRender();
   });
