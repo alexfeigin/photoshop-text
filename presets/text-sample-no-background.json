@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "layers": [
+    {
+      "id": "mkpao8ui_avica5",
+      "type": "outerGlow",
+      "name": "Outer Glow",
+      "enabled": true,
+      "params": {
+        "color": "#1A0024",
+        "opacityPct": 62,
+        "sizePx": 40,
+        "dx": 0,
+        "dy": 8
+      }
+    },
+    {
+      "id": "mkpagc4j_opor3b",
+      "type": "extrusion",
+      "name": "Extrusion",
+      "enabled": true,
+      "params": {
+        "color": "#3c024b",
+        "opacityPct": 96,
+        "steps": 6,
+        "dx": 0,
+        "dy": 3,
+        "blurPx": 2
+      }
+    },
+    {
+      "id": "extrusion_002",
+      "type": "extrusion",
+      "name": "Extrusion (orange)",
+      "enabled": true,
+      "params": {
+        "color": "#DE5221",
+        "opacityPct": 96,
+        "steps": 1,
+        "dx": 0,
+        "dy": 9,
+        "blurPx": 0
+      }
+    },
+    {
+      "id": "base_fill",
+      "type": "gradientFill",
+      "name": "Gradient Fill",
+      "enabled": true,
+      "params": {
+        "stops": [
+          {
+            "offsetPct": 0,
+            "color": "#FFDA18"
+          },
+          {
+            "offsetPct": 35,
+            "color": "#FFCF15"
+          },
+          {
+            "offsetPct": 52,
+            "color": "#FFC411"
+          },
+          {
+            "offsetPct": 70,
+            "color": "#ffa507"
+          },
+          {
+            "offsetPct": 84,
+            "color": "#FFA105"
+          },
+          {
+            "offsetPct": 100,
+            "color": "#FF9D03"
+          }
+        ],
+        "angleDeg": 90
+      }
+    }
+  ]
+}

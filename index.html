@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Photoshop Text Renderer</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="panel">
+        <div class="row">
+          <label class="label" for="textInput">Text</label>
+          <textarea id="textInput" class="textarea" rows="3">LET'S CELEBRATE!</textarea>
+        </div>
+
+        <div class="grid">
+          <div class="row">
+            <label class="label" for="fontSize">Font size</label>
+            <input id="fontSize" class="input" type="number" min="8" max="500" step="1" value="143" />
+          </div>
+
+          <div class="row">
+            <label class="label" for="fillColor">Fill color</label>
+            <div class="colorControl">
+              <input id="fillColor" class="colorSwatch" type="color" value="#000000" />
+              <input id="fillColorHex" class="input" type="text" value="#000000" spellcheck="false" />
+            </div>
+          </div>
+
+          <div class="row">
+            <label class="label" for="align">Alignment</label>
+            <select id="align" class="input">
+              <option value="left">Left</option>
+              <option value="center" selected>Center</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+
+          <div class="row">
+            <label class="label" for="exportScale">Export scale</label>
+            <select id="exportScale" class="input">
+              <option value="1">1x</option>
+              <option value="2" selected>2x</option>
+              <option value="3">3x</option>
+              <option value="4">4x</option>
+            </select>
+          </div>
+
+          <div class="row">
+            <label class="label" for="padding">Padding</label>
+            <input id="padding" class="input" type="number" min="0" max="300" step="1" value="24" />
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="row">
+            <label class="label" for="refOpacity">Reference opacity</label>
+            <input id="refOpacity" class="input" type="range" min="0" max="1" step="0.01" value="0" />
+          </div>
+
+          <div class="row checkboxRow">
+            <input id="showBg" type="checkbox" />
+            <label for="showBg">Show purple background in preview</label>
+          </div>
+        </div>
+
+        <div class="layers">
+          <div class="layersHeader">
+            <div class="layersTitle">Layers</div>
+            <div class="layersActions">
+              <select id="addLayerType" class="input">
+                <option value="gradientFill">Gradient Fill</option>
+                <option value="dropShadow">Drop Shadow</option>
+                <option value="stroke">Stroke</option>
+                <option value="outerGlow">Outer Glow</option>
+                <option value="extrusion">Extrusion</option>
+              </select>
+              <button id="addLayerBtn" class="button" type="button">Add</button>
+            </div>
+          </div>
+
+          <div id="layersList" class="layersList"></div>
+
+          <details class="layerEditor" open>
+            <summary class="effectSummary">Selected layer</summary>
+            <div id="layerEditorBody" class="layerEditorBody"></div>
+          </details>
+
+          <details class="layerJson">
+            <summary class="effectSummary">Import / Export Config</summary>
+            <div class="layerJsonBody">
+              <div class="row">
+                <label class="label" for="configFileInput">Import .json</label>
+                <input id="configFileInput" class="input" type="file" accept="application/json,.json" />
+              </div>
+              <div class="layerJsonActions">
+                <button id="exportConfigBtn" class="button" type="button">Export Config (.json)</button>
+                <button id="loadPresetBtn" class="button" type="button">Load preset</button>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <div class="actions">
+          <button id="exportBtn" class="button">Export PNG (transparent)</button>
+          <a id="downloadLink" class="download" download="text.png" hidden>Download</a>
+          <div id="status" class="status"></div>
+        </div>
+      </div>
+
+      <div class="previewWrap">
+        <div class="preview" id="preview">
+          <img id="referenceImg" class="reference" src="text-sample-no-background.png" alt="reference" />
+          <canvas id="canvas" class="canvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
