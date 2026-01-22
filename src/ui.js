@@ -345,7 +345,13 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
     try {
       setStatus('Loading preset…');
       const res = await fetch('presets/text-sample-no-background.json', { cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const details = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ''}`;
+        console.warn('Could not load preset:', details, res.url);
+        setStatus(`Could not load preset (${details}).`);
+        setTimeout(() => setStatus(''), 2500);
+        return;
+      }
       const txt = await res.text();
       const next = importConfig(txt, els.fillColor?.value);
       applyImportedConfig(next);
