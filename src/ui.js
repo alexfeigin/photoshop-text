@@ -11,6 +11,7 @@ import {
   updateLayer,
 } from './state.js';
 import { exportConfig, importConfig } from './serialize.js';
+import { DEFAULT_PRESET_URL } from './preset.js';
 
 function syncQuickFillToBaseLayer({ els, state }) {
   if (!els.fillColor) return;
@@ -277,6 +278,7 @@ function renderLayerEditor(layer) {
 }
 
 function renderLayers({ els, state }) {
+  if (!els.layersList || !els.layerEditorBody) return;
   const selectedId = state.selectedLayerId;
 
   els.layersList.innerHTML = state.layers
@@ -336,7 +338,7 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
   }
 
   // Basic controls
-  els.textInput.addEventListener('input', () => {
+  els.textInput?.addEventListener('input', () => {
     onStateChange();
     scheduleRender();
   });
@@ -344,7 +346,10 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
   els.loadPresetBtn?.addEventListener('click', async () => {
     try {
       setStatus('Loading preset…');
-      const res = await fetch('presets/text-sample-no-background.json', { cache: 'no-store' });
+      const presetUrl = typeof els.expertPresetSelect?.value === 'string' && els.expertPresetSelect.value
+        ? els.expertPresetSelect.value
+        : DEFAULT_PRESET_URL;
+      const res = await fetch(presetUrl, { cache: 'no-store' });
       if (!res.ok) {
         const details = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ''}`;
         console.warn('Could not load preset:', details, res.url);
@@ -393,7 +398,17 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
       scheduleRender();
     }
   });
-  els.fontSize.addEventListener('input', () => {
+  els.fontSize?.addEventListener('input', () => {
+    onStateChange();
+    scheduleRender();
+  });
+
+  els.scaleX?.addEventListener('input', () => {
+    onStateChange();
+    scheduleRender();
+  });
+
+  els.scaleY?.addEventListener('input', () => {
     onStateChange();
     scheduleRender();
   });
@@ -418,21 +433,21 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
     onStateChange();
     scheduleRender();
   });
-  els.align.addEventListener('change', () => {
+  els.align?.addEventListener('change', () => {
     onStateChange();
     scheduleRender();
   });
-  els.padding.addEventListener('input', () => {
+  els.padding?.addEventListener('input', () => {
     onStateChange();
     scheduleRender();
   });
 
-  els.refOpacity.addEventListener('input', () => {
+  els.refOpacity?.addEventListener('input', () => {
     const val = Number(els.refOpacity.value);
     els.referenceImg.style.opacity = String(Math.max(0, Math.min(1, val)));
   });
 
-  els.showBg.addEventListener('change', () => {
+  els.showBg?.addEventListener('change', () => {
     onStateChange();
     scheduleRender();
   });

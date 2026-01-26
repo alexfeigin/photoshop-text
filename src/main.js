@@ -2,6 +2,7 @@ import { createDefaultState, getGradientMidColor } from './state.js';
 import { renderToCanvas } from './renderer.js';
 import { bindUI } from './ui.js';
 import { importConfig } from './serialize.js';
+import { DEFAULT_PRESET_URL, PRESETS } from './preset.js';
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -13,8 +14,12 @@ function ensureFontLoaded(fontFamily) {
 
 function getEls() {
   return {
+    presetSelect: document.getElementById('presetSelect'),
+    expertPresetSelect: document.getElementById('expertPresetSelect'),
     textInput: document.getElementById('textInput'),
     fontSize: document.getElementById('fontSize'),
+    scaleX: document.getElementById('scaleX'),
+    scaleY: document.getElementById('scaleY'),
     fillColor: document.getElementById('fillColor'),
     fillColorHex: document.getElementById('fillColorHex'),
     align: document.getElementById('align'),
@@ -35,6 +40,48 @@ function getEls() {
     canvas: document.getElementById('canvas'),
     referenceImg: document.getElementById('referenceImg'),
   };
+}
+
+function isExpertMode() {
+  try {
+    const url = new URL(window.location.href);
+    const v = (url.searchParams.get('expert') || '').toLowerCase();
+    return v === 'yes' || v === 'true' || v === '1';
+  } catch {
+    return false;
+  }
+}
+
+function setModeClass(expert) {
+  document.body.classList.toggle('isExpert', Boolean(expert));
+  document.body.classList.toggle('isRegular', !expert);
+}
+
+const DEFAULT_REGULAR_PRESET_URL = PRESETS[0]?.url || DEFAULT_PRESET_URL;
+
+async function loadPresetIntoState({ url, els, state, schedulePersist }) {
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) {
+    const details = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ''}`;
+    throw new Error(`Could not load preset (${details}): ${res.url}`);
+  }
+  const txt = await res.text();
+  const next = importConfig(txt, els.fillColor?.value);
+  state.layers = next.layers;
+  state.selectedLayerId = next.selectedLayerId;
+
+  const gfill = state.layers.find((l) => l.type === 'gradientFill');
+  if (gfill && els.fillColor) {
+    const mid = getGradientMidColor(gfill.params, els.fillColor.value);
+    els.fillColor.value = mid;
+    if (els.fillColorHex) els.fillColorHex.value = mid;
+  }
+  const fill = state.layers.find((l) => l.type === 'fill');
+  if (!gfill && fill && els.fillColor) {
+    els.fillColor.value = fill.params.color;
+    if (els.fillColorHex) els.fillColorHex.value = fill.params.color;
+  }
+  schedulePersist?.();
 }
 
 function setStatus(els, msg) {
@@ -64,6 +111,12 @@ function saveSessionState(payload) {
   }
 }
 
+function clampScale(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return 1;
+  return clamp(v, 0.1, 5);
+}
+
 async function exportPng({ els, state, style }) {
   setStatus(els, 'Preparing…');
   els.downloadLink.hidden = true;
@@ -71,6 +124,8 @@ async function exportPng({ els, state, style }) {
   await ensureFontLoaded(style.fontFamily);
 
   const fontSize = clamp(Number(els.fontSize.value) || 143, 8, 500);
+  const scaleX = clampScale(els.scaleX?.value);
+  const scaleY = clampScale(els.scaleY?.value);
   const padding = clamp(Number(els.padding.value) || 24, 0, 300);
   const alignment = els.align.value;
   const scale = clamp(Number(els.exportScale.value) || 2, 1, 4);
@@ -80,6 +135,8 @@ async function exportPng({ els, state, style }) {
     canvas: exportCanvas,
     text: els.textInput.value,
     fontSize,
+    scaleX,
+    scaleY,
     alignment,
     padding,
     showBg: false,
@@ -105,6 +162,9 @@ async function exportPng({ els, state, style }) {
 }
 
 async function init() {
+  const expertMode = isExpertMode();
+  setModeClass(expertMode);
+
   const style = {
     fontFamily: '"Mikado"',
     fontWeight: 900,
@@ -132,6 +192,8 @@ async function init() {
         ui: {
           text: els.textInput?.value ?? '',
           fontSize: els.fontSize?.value ?? '',
+          scaleX: els.scaleX?.value ?? '',
+          scaleY: els.scaleY?.value ?? '',
           alignment: els.align?.value ?? 'center',
           padding: els.padding?.value ?? '',
           showBg: Boolean(els.showBg?.checked),
@@ -144,7 +206,7 @@ async function init() {
   }
 
   const session = loadSessionState();
-  if (session && Array.isArray(session.layers)) {
+  if (expertMode && session && Array.isArray(session.layers)) {
     const next = importConfig(JSON.stringify({ version: 1, layers: session.layers }), els.fillColor?.value);
     state.layers = next.layers;
     state.selectedLayerId = typeof session.selectedLayerId === 'string' ? session.selectedLayerId : next.selectedLayerId;
@@ -152,6 +214,8 @@ async function init() {
     if (session.ui && typeof session.ui === 'object') {
       if (typeof session.ui.text === 'string' && els.textInput) els.textInput.value = session.ui.text;
       if (typeof session.ui.fontSize === 'string' && els.fontSize) els.fontSize.value = session.ui.fontSize;
+      if (typeof session.ui.scaleX === 'string' && els.scaleX) els.scaleX.value = session.ui.scaleX;
+      if (typeof session.ui.scaleY === 'string' && els.scaleY) els.scaleY.value = session.ui.scaleY;
       if (typeof session.ui.alignment === 'string' && els.align) els.align.value = session.ui.alignment;
       if (typeof session.ui.padding === 'string' && els.padding) els.padding.value = session.ui.padding;
       if (typeof session.ui.showBg === 'boolean' && els.showBg) els.showBg.checked = session.ui.showBg;
@@ -171,28 +235,9 @@ async function init() {
 
     schedulePersist();
   } else {
+    const initialPresetUrl = expertMode ? DEFAULT_PRESET_URL : DEFAULT_REGULAR_PRESET_URL;
     try {
-      const res = await fetch('presets/text-sample-no-background.json', { cache: 'no-store' });
-      if (res.ok) {
-        const txt = await res.text();
-        const next = importConfig(txt, els.fillColor?.value);
-        state.layers = next.layers;
-        state.selectedLayerId = next.selectedLayerId;
-
-        const gfill = state.layers.find((l) => l.type === 'gradientFill');
-        if (gfill && els.fillColor) {
-          const mid = getGradientMidColor(gfill.params, els.fillColor.value);
-          els.fillColor.value = mid;
-          if (els.fillColorHex) els.fillColorHex.value = mid;
-        }
-        const fill = state.layers.find((l) => l.type === 'fill');
-        if (!gfill && fill && els.fillColor) {
-          els.fillColor.value = fill.params.color;
-          if (els.fillColorHex) els.fillColorHex.value = fill.params.color;
-        }
-
-        schedulePersist();
-      }
+      await loadPresetIntoState({ url: initialPresetUrl, els, state, schedulePersist });
     } catch (e) {
       console.warn('Could not load sample preset:', e);
     }
@@ -201,6 +246,8 @@ async function init() {
   let renderQueued = false;
   function render() {
     const fontSize = clamp(Number(els.fontSize.value) || 143, 8, 500);
+    const scaleX = clampScale(els.scaleX?.value);
+    const scaleY = clampScale(els.scaleY?.value);
     const padding = clamp(Number(els.padding.value) || 24, 0, 300);
     const alignment = els.align.value;
     const showBg = els.showBg.checked;
@@ -209,6 +256,8 @@ async function init() {
       canvas: els.canvas,
       text: els.textInput.value,
       fontSize,
+      scaleX,
+      scaleY,
       alignment,
       padding,
       showBg,
@@ -236,6 +285,34 @@ async function init() {
     onStateChange: schedulePersist,
   });
 
+  if (!expertMode && els.presetSelect) {
+    els.presetSelect.innerHTML = (PRESETS || [])
+      .map((p) => `<option value="${p.url}">${p.label}</option>`)
+      .join('');
+
+    els.presetSelect.value = DEFAULT_REGULAR_PRESET_URL;
+    els.presetSelect.addEventListener('change', async () => {
+      try {
+        setStatus(els, 'Loading preset…');
+        await loadPresetIntoState({ url: els.presetSelect.value, els, state, schedulePersist });
+        setStatus(els, 'Loaded preset.');
+        scheduleRender();
+        setTimeout(() => setStatus(els, ''), 1500);
+      } catch (e) {
+        console.warn(e);
+        setStatus(els, 'Could not load preset.');
+        setTimeout(() => setStatus(els, ''), 2500);
+      }
+    });
+  }
+
+  if (expertMode && els.expertPresetSelect) {
+    els.expertPresetSelect.innerHTML = (PRESETS || [])
+      .map((p) => `<option value="${p.url}">${p.label}</option>`)
+      .join('');
+    els.expertPresetSelect.value = DEFAULT_PRESET_URL;
+  }
+
   try {
     setStatus(els, 'Loading font…');
     await ensureFontLoaded(style.fontFamily);
@@ -254,6 +331,8 @@ async function init() {
     await ensureFontLoaded(style.fontFamily);
 
     const fontSize = clamp(Number(opts.fontSize) || 143, 8, 500);
+    const scaleX = clampScale(opts.scaleX);
+    const scaleY = clampScale(opts.scaleY);
     const padding = clamp(Number(opts.padding) || 24, 0, 300);
     const alignment = opts.alignment || 'center';
     const scale = clamp(Number(opts.scale) || 1, 1, 8);
@@ -265,6 +344,8 @@ async function init() {
       canvas: c,
       text: String(opts.text ?? ''),
       fontSize,
+      scaleX,
+      scaleY,
       alignment,
       padding,
       showBg: Boolean(opts.showBg),

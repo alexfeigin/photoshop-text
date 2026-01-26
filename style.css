@@ -30,6 +30,14 @@ body {
   overflow: hidden;
 }
 
+body.isRegular .expertOnly {
+  display: none !important;
+}
+
+body.isExpert .regularOnly {
+  display: none !important;
+}
+
 .app {
   display: grid;
   grid-template-columns: 380px 1fr;

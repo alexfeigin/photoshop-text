@@ -135,6 +135,8 @@ export function renderToCanvas({
   canvas,
   text,
   fontSize,
+  scaleX,
+  scaleY,
   alignment,
   padding,
   showBg,
@@ -151,12 +153,26 @@ export function renderToCanvas({
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas 2D context unavailable');
 
+  const sxRaw = Number(scaleX);
+  const syRaw = Number(scaleY);
+  const sx = Number.isFinite(sxRaw) && sxRaw > 0 ? sxRaw : 1;
+  const sy = Number.isFinite(syRaw) && syRaw > 0 ? syRaw : 1;
+  const blurScale = Math.max(sx, sy);
+
   const lines = splitLines(text);
   const scratch = document.createElement('canvas');
   const sctx = scratch.getContext('2d');
   if (!sctx) throw new Error('Canvas 2D context unavailable');
 
-  const metrics = measureTextBlock(sctx, lines, fontSize * scale, style);
+  const baseFontPx = fontSize * scale;
+  const metricsBase = measureTextBlock(sctx, lines, baseFontPx, style);
+  const metrics = {
+    width: metricsBase.width * sx,
+    height: metricsBase.height * sy,
+    ascent: metricsBase.ascent * sy,
+    descent: metricsBase.descent * sy,
+    lineHeight: metricsBase.lineHeight * sy,
+  };
 
   const padUser = padding * scale;
   const pad = padUser + (style.effectPad || 0) * scale;
@@ -172,18 +188,19 @@ export function renderToCanvas({
     const p = layer.params || {};
 
     if (layer.type === 'dropShadow') {
-      const blur = (Number(p.sizePx) || 0) * scale;
+      const blur = (Number(p.sizePx) || 0) * scale * blurScale;
       const distance = (Number(p.distancePx) || 0) * scale;
       const angle = ((Number(p.angleDeg) || 0) * Math.PI) / 180;
-      const dx = distance * Math.cos(angle);
-      const dy = distance * Math.sin(angle);
+      const dx = distance * Math.cos(angle) * sx;
+      const dy = distance * Math.sin(angle) * sy;
 
       extraRight = Math.max(extraRight, blur + Math.max(0, dx));
       extraLeft = Math.max(extraLeft, blur + Math.max(0, -dx));
       extraBottom = Math.max(extraBottom, blur + Math.max(0, dy));
       extraTop = Math.max(extraTop, blur + Math.max(0, -dy));
 
-      const spreadPx = ((Number(p.spreadPct) || 0) / 100) * (Number(p.sizePx) || 0) * 2 * scale;
+      const spreadPx =
+        ((Number(p.spreadPct) || 0) / 100) * (Number(p.sizePx) || 0) * 2 * scale * blurScale;
       extraRight = Math.max(extraRight, spreadPx);
       extraLeft = Math.max(extraLeft, spreadPx);
       extraBottom = Math.max(extraBottom, spreadPx);
@@ -191,9 +208,9 @@ export function renderToCanvas({
     }
 
     if (layer.type === 'outerGlow') {
-      const blur = (Number(p.sizePx) || 0) * scale;
-      const dx = (Number(p.dx) || 0) * scale;
-      const dy = (Number(p.dy) || 0) * scale;
+      const blur = (Number(p.sizePx) || 0) * scale * blurScale;
+      const dx = (Number(p.dx) || 0) * scale * sx;
+      const dy = (Number(p.dy) || 0) * scale * sy;
       extraRight = Math.max(extraRight, blur + Math.max(0, dx));
       extraLeft = Math.max(extraLeft, blur + Math.max(0, -dx));
       extraBottom = Math.max(extraBottom, blur + Math.max(0, dy));
@@ -201,7 +218,7 @@ export function renderToCanvas({
     }
 
     if (layer.type === 'stroke') {
-      const w = (Number(p.widthPx) || 0) * scale;
+      const w = (Number(p.widthPx) || 0) * scale * blurScale;
       extraRight = Math.max(extraRight, w);
       extraLeft = Math.max(extraLeft, w);
       extraBottom = Math.max(extraBottom, w);
@@ -210,8 +227,8 @@ export function renderToCanvas({
 
     if (layer.type === 'extrusion') {
       const steps = Number(p.steps) || 0;
-      const dx = (Number(p.dx) || 0) * steps * scale;
-      const dy = (Number(p.dy) || 0) * steps * scale;
+      const dx = (Number(p.dx) || 0) * steps * scale * sx;
+      const dy = (Number(p.dy) || 0) * steps * scale * sy;
       extraRight = Math.max(extraRight, Math.max(0, dx));
       extraLeft = Math.max(extraLeft, Math.max(0, -dx));
       extraBottom = Math.max(extraBottom, Math.max(0, dy));
@@ -234,7 +251,7 @@ export function renderToCanvas({
   }
 
   ctx.textBaseline = 'alphabetic';
-  ctx.font = `${style.fontWeight} ${fontSize * scale}px ${style.fontFamily}`;
+  ctx.font = `${style.fontWeight} ${baseFontPx}px ${style.fontFamily}`;
 
   const resolvedAnchor = anchor || 'topleft';
   const shiftX = (Number(offsetX) || 0) * scale;
@@ -253,6 +270,13 @@ export function renderToCanvas({
   const blockTop = y0 - metrics.ascent;
   const blockBottom = blockTop + metrics.height;
 
+  // Draw in a scaled coordinate space so scaling affects glyphs and effects.
+  // We convert device-space coordinates (computed above) into unscaled coordinates for draw calls.
+  ctx.save();
+  ctx.scale(sx, sy);
+  const toUx = (x) => x / sx;
+  const toUy = (y) => y / sy;
+
   for (const layer of stack) {
     const p = layer.params || {};
 
@@ -261,21 +285,21 @@ export function renderToCanvas({
       const blur = (Number(p.sizePx) || 0) * scale;
       const distance = (Number(p.distancePx) || 0) * scale;
       const angle = ((Number(p.angleDeg) || 0) * Math.PI) / 180;
-      const dx = distance * Math.cos(angle);
-      const dy = distance * Math.sin(angle);
+      const dxDev = distance * Math.cos(angle) * sx;
+      const dyDev = distance * Math.sin(angle) * sy;
       const spreadPx = ((Number(p.spreadPct) || 0) / 100) * (Number(p.sizePx) || 0) * 2 * scale;
 
       ctx.save();
       ctx.globalCompositeOperation = p.blend === 'multiply' ? 'multiply' : 'source-over';
       ctx.shadowColor = rgbaFromHex(p.color || '#000000', opacity);
       ctx.shadowBlur = blur;
-      ctx.shadowOffsetX = dx;
-      ctx.shadowOffsetY = dy;
+      ctx.shadowOffsetX = dxDev / sx;
+      ctx.shadowOffsetY = dyDev / sy;
 
       ctx.fillStyle = 'rgba(0,0,0,1)';
       for (let i = 0; i < lines.length; i++) {
         const y = y0 + i * metrics.lineHeight;
-        ctx.fillText(lines[i], x, y);
+        ctx.fillText(lines[i], toUx(x), toUy(y));
       }
 
       if (spreadPx > 0.1) {
@@ -286,7 +310,7 @@ export function renderToCanvas({
         ctx.strokeStyle = 'rgba(0,0,0,1)';
         for (let i = 0; i < lines.length; i++) {
           const y = y0 + i * metrics.lineHeight;
-          ctx.strokeText(lines[i], x, y);
+          ctx.strokeText(lines[i], toUx(x), toUy(y));
         }
       }
 
@@ -297,8 +321,8 @@ export function renderToCanvas({
     if (layer.type === 'outerGlow') {
       const opacity = clamp((Number(p.opacityPct) || 0) / 100, 0, 1);
       const blur = (Number(p.sizePx) || 0) * scale;
-      const dx = (Number(p.dx) || 0) * scale;
-      const dy = (Number(p.dy) || 0) * scale;
+      const dxDev = (Number(p.dx) || 0) * scale * sx;
+      const dyDev = (Number(p.dy) || 0) * scale * sy;
 
       const tmp = document.createElement('canvas');
       tmp.width = canvas.width;
@@ -307,6 +331,8 @@ export function renderToCanvas({
 
       if (tctx) {
         tctx.clearRect(0, 0, tmp.width, tmp.height);
+        tctx.save();
+        tctx.scale(sx, sy);
         tctx.font = ctx.font;
         tctx.textAlign = ctx.textAlign;
         tctx.textBaseline = ctx.textBaseline;
@@ -314,12 +340,12 @@ export function renderToCanvas({
         // 1) Draw shadowed glyph.
         tctx.shadowColor = rgbaFromHex(p.color || '#6E00AF', opacity);
         tctx.shadowBlur = blur;
-        tctx.shadowOffsetX = dx;
-        tctx.shadowOffsetY = dy;
+        tctx.shadowOffsetX = dxDev / sx;
+        tctx.shadowOffsetY = dyDev / sy;
         tctx.fillStyle = 'rgba(0,0,0,1)';
         for (let i = 0; i < lines.length; i++) {
           const y = y0 + i * metrics.lineHeight;
-          tctx.fillText(lines[i], x, y);
+          tctx.fillText(lines[i], toUx(x), toUy(y));
         }
 
         // 2) Punch out the solid glyph, leaving only the glow.
@@ -330,10 +356,13 @@ export function renderToCanvas({
         tctx.shadowOffsetY = 0;
         for (let i = 0; i < lines.length; i++) {
           const y = y0 + i * metrics.lineHeight;
-          tctx.fillText(lines[i], x, y);
+          tctx.fillText(lines[i], toUx(x), toUy(y));
         }
 
+        tctx.restore();
+
         ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.globalCompositeOperation = 'source-over';
         ctx.drawImage(tmp, 0, 0);
         ctx.restore();
@@ -363,7 +392,7 @@ export function renderToCanvas({
         const dy = dyStep * step;
         for (let i = 0; i < lines.length; i++) {
           const y = y0 + i * metrics.lineHeight;
-          ctx.fillText(lines[i], x + dx, y + dy);
+          ctx.fillText(lines[i], toUx(x + dx * sx), toUy(y + dy * sy));
         }
       }
 
@@ -375,7 +404,7 @@ export function renderToCanvas({
         ctx.globalAlpha = prevAlpha * fracStep;
         for (let i = 0; i < lines.length; i++) {
           const y = y0 + i * metrics.lineHeight;
-          ctx.fillText(lines[i], x + dx, y + dy);
+          ctx.fillText(lines[i], toUx(x + dx * sx), toUy(y + dy * sy));
         }
         ctx.globalAlpha = prevAlpha;
       }
@@ -390,7 +419,7 @@ export function renderToCanvas({
       ctx.fillStyle = p.color || '#000000';
       for (let i = 0; i < lines.length; i++) {
         const y = y0 + i * metrics.lineHeight;
-        ctx.fillText(lines[i], x, y);
+        ctx.fillText(lines[i], toUx(x), toUy(y));
       }
       ctx.restore();
       continue;
@@ -436,7 +465,7 @@ export function renderToCanvas({
       ctx.save();
       ctx.filter = 'none';
 
-      const g = ctx.createLinearGradient(x0, yA, x1, yB);
+      const g = ctx.createLinearGradient(toUx(x0), toUy(yA), toUx(x1), toUy(yB));
       for (const s of stops) {
         g.addColorStop(s.offset, s.color);
       }
@@ -444,7 +473,7 @@ export function renderToCanvas({
       ctx.fillStyle = g;
       for (let i = 0; i < lines.length; i++) {
         const y = y0 + i * metrics.lineHeight;
-        ctx.fillText(lines[i], x, y);
+        ctx.fillText(lines[i], toUx(x), toUy(y));
       }
 
       ctx.restore();
@@ -455,19 +484,48 @@ export function renderToCanvas({
       const opacity = clamp((Number(p.opacityPct) || 0) / 100, 0, 1);
       const w = clamp(Number(p.widthPx) || 0, 0, 200) * scale;
       if (w <= 0) continue;
-      ctx.save();
-      ctx.lineJoin = 'round';
-      ctx.miterLimit = 2;
-      ctx.lineWidth = w;
-      ctx.strokeStyle = rgbaFromHex(p.color || '#000000', opacity);
-      for (let i = 0; i < lines.length; i++) {
-        const y = y0 + i * metrics.lineHeight;
-        ctx.strokeText(lines[i], x, y);
+
+      const tmp = document.createElement('canvas');
+      tmp.width = canvas.width;
+      tmp.height = canvas.height;
+      const tctx = tmp.getContext('2d');
+
+      if (tctx) {
+        tctx.clearRect(0, 0, tmp.width, tmp.height);
+        tctx.save();
+        tctx.scale(sx, sy);
+        tctx.font = ctx.font;
+        tctx.textAlign = ctx.textAlign;
+        tctx.textBaseline = ctx.textBaseline;
+        tctx.lineJoin = 'round';
+        tctx.miterLimit = 2;
+        tctx.lineWidth = w;
+        tctx.strokeStyle = rgbaFromHex(p.color || '#000000', opacity);
+        for (let i = 0; i < lines.length; i++) {
+          const y = y0 + i * metrics.lineHeight;
+          tctx.strokeText(lines[i], toUx(x), toUy(y));
+        }
+
+        tctx.globalCompositeOperation = 'destination-out';
+        tctx.fillStyle = 'rgba(0,0,0,1)';
+        for (let i = 0; i < lines.length; i++) {
+          const y = y0 + i * metrics.lineHeight;
+          tctx.fillText(lines[i], toUx(x), toUy(y));
+        }
+
+        tctx.restore();
+
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.drawImage(tmp, 0, 0);
+        ctx.restore();
       }
-      ctx.restore();
       continue;
     }
   }
+
+  ctx.restore();
 
   return { width: canvas.width, height: canvas.height };
 }

@@ -3,6 +3,8 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
+import { DEFAULT_PRESET_URL } from '../src/preset.js';
+
 import { chromium } from 'playwright';
 import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
@@ -76,9 +78,18 @@ function dataUrlToBuffer(dataUrl) {
   return Buffer.from(dataUrl.slice(prefix.length), 'base64');
 }
 
+function cloneJson(x) {
+  return JSON.parse(JSON.stringify(x));
+}
+
 async function main() {
   const outDir = path.join(projectRoot, 'test-output');
   await mkdir(outDir, { recursive: true });
+
+  const presetPath = path.join(projectRoot, DEFAULT_PRESET_URL);
+  const presetBuf = await readFile(presetPath, 'utf8');
+  const preset = JSON.parse(presetBuf);
+  const presetLayers = Array.isArray(preset?.layers) ? preset.layers : [];
 
   const samplePath = path.join(projectRoot, 'text-sample-no-background.png');
   const sampleBuf = await readFile(samplePath);
@@ -94,7 +105,7 @@ async function main() {
   const page = await browser.newPage({ viewport: { width: 1200, height: 500 } });
 
   try {
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.goto(`${url}?expert=yes`, { waitUntil: 'networkidle' });
 
     async function renderActualPng(offsetX, offsetY) {
       const dataUrl = await page.evaluate(async (opts) => {
@@ -105,66 +116,7 @@ async function main() {
         alignment: 'center',
         padding: 24,
         scale: 1,
-        layers: [
-          {
-            id: 'outerGlow_cloud',
-            type: 'outerGlow',
-            name: 'Outer Glow (cloud)',
-            enabled: true,
-            params: {
-              color: '#1A0024',
-              opacityPct: 62,
-              sizePx: 40,
-              dx: 0,
-              dy: 8,
-            },
-          },
-          {
-            id: 'mkpagc4j_opor3b',
-            type: 'extrusion',
-            name: 'Extrusion',
-            enabled: true,
-            params: {
-              color: '#3c024b',
-              opacityPct: 96,
-              steps: 6,
-              dx: 0,
-              dy: 3,
-              blurPx: 2,
-            },
-          },
-          {
-            id: 'extrusion_002',
-            type: 'extrusion',
-            name: 'Extrusion (orange)',
-            enabled: true,
-            params: {
-              color: '#DE5221',
-              opacityPct: 96,
-              steps: 1,
-              dx: 0,
-              dy: 9,
-              blurPx: 0,
-            },
-          },
-          {
-            id: 'base_fill',
-            type: 'gradientFill',
-            name: 'Gradient Fill',
-            enabled: true,
-            params: {
-              stops: [
-                { offsetPct: 0, color: '#FFDA18' },
-                { offsetPct: 35, color: '#FFCF15' },
-                { offsetPct: 52, color: '#FFC411' },
-                { offsetPct: 70, color: '#FFA507' },
-                { offsetPct: 84, color: '#FFA105' },
-                { offsetPct: 100, color: '#FF9D03' },
-              ],
-              angleDeg: 90,
-            },
-          },
-        ],
+        layers: presetLayers,
         width: samplePng.width,
         height: samplePng.height,
         anchor: 'center',
@@ -223,6 +175,81 @@ async function main() {
     const { numDiffPixels, diff } = diffCount(samplePng, actualPng);
     best.actualBuf = actualBuf;
     best.diff = diff;
+
+    // Optional: brute-force a small grid of preset parameters to reduce mismatch.
+    // Enable with: TUNE_PRESET=1 node tests/visual-regression.mjs
+    if (process.env.TUNE_PRESET === '1') {
+      const baseOffsetX = best.offsetX;
+      const baseOffsetY = best.offsetY;
+
+      function findLayer(layers, type, id) {
+        if (!Array.isArray(layers)) return null;
+        if (id) return layers.find((l) => l && l.id === id) || null;
+        return layers.find((l) => l && l.type === type) || null;
+      }
+
+      let tuneBest = { numDiffPixels: Infinity, glow: null, extrusionBlurPx: null };
+
+      const sizePxVals = [30, 32, 34, 36, 38, 40, 42, 44];
+      const dyVals = [4, 5, 6, 7, 8, 9, 10];
+      const opacityVals = [52, 54, 56, 58, 60, 62, 64, 66];
+      const blurVals = [0, 0.5, 1, 1.5, 2, 2.5, 3];
+
+      for (const sizePx of sizePxVals) {
+        for (const dy of dyVals) {
+          for (const opacityPct of opacityVals) {
+            for (const blurPx of blurVals) {
+              const layers = cloneJson(presetLayers);
+
+              const glow = findLayer(layers, 'outerGlow');
+              if (glow && glow.params) {
+                glow.params.sizePx = sizePx;
+                glow.params.dy = dy;
+                glow.params.opacityPct = opacityPct;
+              }
+
+              const extrusion = findLayer(layers, 'extrusion', 'mkpagc4j_opor3b');
+              if (extrusion && extrusion.params) {
+                extrusion.params.blurPx = blurPx;
+              }
+
+              const { actualPng: png } = await (async () => {
+                const dataUrl = await page.evaluate(async (opts) => {
+                  return await window.__renderTestPngDataUrl(opts);
+                }, {
+                  text: "LET'S CELEBRATE!",
+                  fontSize: 143,
+                  alignment: 'center',
+                  padding: 24,
+                  scale: 1,
+                  layers,
+                  width: samplePng.width,
+                  height: samplePng.height,
+                  anchor: 'center',
+                  showBg: compareWithBackground,
+                  bgColor: sampleBgColor,
+                  offsetX: baseOffsetX,
+                  offsetY: baseOffsetY,
+                });
+                const buf = dataUrlToBuffer(dataUrl);
+                return { actualPng: decodePng(buf) };
+              })();
+
+              const { numDiffPixels: d } = diffCount(samplePng, png);
+              if (d < tuneBest.numDiffPixels) {
+                tuneBest = {
+                  numDiffPixels: d,
+                  glow: { sizePx, dy, opacityPct },
+                  extrusionBlurPx: blurPx,
+                };
+              }
+            }
+          }
+        }
+      }
+
+      console.log('TUNE_PRESET best:', tuneBest);
+    }
 
     const actualOutPath = path.join(outDir, 'actual.png');
     const diffOutPath = path.join(outDir, 'diff.png');

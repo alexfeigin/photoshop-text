@@ -4,7 +4,7 @@
     {
       "id": "mkpao8ui_avica5",
       "type": "outerGlow",
-      "name": "Outer Glow",
+      "name": "diffused shadow",
       "enabled": true,
       "params": {
         "color": "#1A0024",
@@ -17,7 +17,7 @@
     {
       "id": "mkpagc4j_opor3b",
       "type": "extrusion",
-      "name": "Extrusion",
+      "name": "Extrusion (dark purpule)",
       "enabled": true,
       "params": {
         "color": "#3c024b",
@@ -43,6 +43,34 @@
       }
     },
     {
+      "id": "mkpeihu1_1v8dv4",
+      "type": "extrusion",
+      "name": "Extrusion (white upper glow)",
+      "enabled": true,
+      "params": {
+        "color": "#fff5d2",
+        "opacityPct": 96,
+        "steps": 1,
+        "dx": 0,
+        "dy": -2,
+        "blurPx": 0
+      }
+    },
+    {
+      "id": "mkpm2f4j_5bmg75",
+      "type": "extrusion",
+      "name": "Extrusion (orange lower gow)",
+      "enabled": true,
+      "params": {
+        "color": "#ffaf03",
+        "opacityPct": 96,
+        "steps": 1,
+        "dx": 0,
+        "dy": 2,
+        "blurPx": 0
+      }
+    },
+    {
       "id": "base_fill",
       "type": "gradientFill",
       "name": "Gradient Fill",
@@ -54,20 +82,16 @@
             "color": "#FFDA18"
           },
           {
-            "offsetPct": 35,
-            "color": "#FFCF15"
+            "offsetPct": 34,
+            "color": "#FFD918"
           },
           {
-            "offsetPct": 52,
-            "color": "#FFC411"
+            "offsetPct": 66,
+            "color": "#FFB40C"
           },
           {
-            "offsetPct": 70,
-            "color": "#ffa507"
-          },
-          {
-            "offsetPct": 84,
-            "color": "#FFA105"
+            "offsetPct": 85,
+            "color": "#FF9E04"
           },
           {
             "offsetPct": 100,

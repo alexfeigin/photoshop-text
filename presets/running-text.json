@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "layers": [
+    {
+      "id": "mkshzmc5_5fd2wt",
+      "type": "fill",
+      "name": "Fill",
+      "enabled": true,
+      "params": {
+        "color": "#ffffff"
+      }
+    },
+    {
+      "id": "mksi0iw6_9av6hp",
+      "type": "stroke",
+      "name": "Stroke",
+      "enabled": true,
+      "params": {
+        "color": "#000000",
+        "opacityPct": 100,
+        "widthPx": 8
+      }
+    },
+    {
+      "id": "mksipxno_zd86j7",
+      "type": "outerGlow",
+      "name": "Outer Glow",
+      "enabled": true,
+      "params": {
+        "color": "#000000",
+        "opacityPct": 50,
+        "sizePx": 10,
+        "dx": 0,
+        "dy": 8
+      }
+    }
+  ]
+}
