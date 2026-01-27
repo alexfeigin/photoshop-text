@@ -38,6 +38,12 @@ function getEls() {
     downloadLink: document.getElementById('downloadLink'),
     status: document.getElementById('status'),
     appVersion: document.getElementById('appVersion'),
+    appVersionText: document.getElementById('appVersionText'),
+    changelogLink: document.getElementById('changelogLink'),
+    changelogOverlay: document.getElementById('changelogOverlay'),
+    changelogModal: document.getElementById('changelogModal'),
+    changelogClose: document.getElementById('changelogClose'),
+    changelogBody: document.getElementById('changelogBody'),
     canvas: document.getElementById('canvas'),
     referenceImg: document.getElementById('referenceImg'),
   };
@@ -167,8 +173,117 @@ async function init() {
   const els = getEls();
   const state = createDefaultState();
 
-  if (els.appVersion) {
+  if (els.changelogOverlay) {
+    els.changelogOverlay.hidden = true;
+  }
+
+  if (els.appVersionText) {
+    els.appVersionText.textContent = `v${APP_VERSION}`;
+  } else if (els.appVersion) {
     els.appVersion.textContent = `v${APP_VERSION}`;
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  function renderBasicMarkdown(md) {
+    const lines = String(md || '').replaceAll('\r\n', '\n').split('\n');
+    let html = '';
+    let inUl = false;
+
+    function closeUl() {
+      if (!inUl) return;
+      html += '</ul>';
+      inUl = false;
+    }
+
+    for (const rawLine of lines) {
+      const line = rawLine.trimEnd();
+
+      if (/^#{1,6} /.test(line)) {
+        closeUl();
+        const m = line.match(/^(#{1,6})\s+(.*)$/);
+        const level = m ? m[1].length : 1;
+        const text = m ? m[2] : line;
+        html += `<h${level}>${escapeHtml(text)}</h${level}>`;
+        continue;
+      }
+
+      if (/^[-*] /.test(line)) {
+        if (!inUl) {
+          html += '<ul>';
+          inUl = true;
+        }
+        html += `<li>${escapeHtml(line.replace(/^[-*]\s+/, ''))}</li>`;
+        continue;
+      }
+
+      if (line.trim() === '') {
+        closeUl();
+        continue;
+      }
+
+      closeUl();
+      html += `<p>${escapeHtml(line)}</p>`;
+    }
+
+    closeUl();
+    return html;
+  }
+
+  let changelogLoaded = false;
+  async function ensureChangelogLoaded() {
+    if (changelogLoaded) return;
+    if (!els.changelogBody) return;
+    try {
+      const res = await fetch('./CHANGELOG.md', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const md = await res.text();
+      els.changelogBody.innerHTML = renderBasicMarkdown(md);
+      changelogLoaded = true;
+    } catch {
+      els.changelogBody.textContent = 'Could not load changelog.';
+      changelogLoaded = true;
+    }
+  }
+
+  function closeChangelog() {
+    if (!els.changelogOverlay) return;
+    els.changelogOverlay.hidden = true;
+  }
+
+  async function openChangelog() {
+    if (!els.changelogOverlay) return;
+    await ensureChangelogLoaded();
+    els.changelogOverlay.hidden = false;
+    els.changelogClose?.focus?.();
+  }
+
+  if (els.changelogLink && els.changelogOverlay) {
+    els.changelogLink.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await openChangelog();
+    });
+
+    els.changelogClose?.addEventListener('click', () => {
+      closeChangelog();
+    });
+
+    els.changelogOverlay.addEventListener('click', (e) => {
+      if (e.target === els.changelogOverlay) closeChangelog();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (els.changelogOverlay.hidden) return;
+      closeChangelog();
+    });
   }
 
   let persistTimer = null;

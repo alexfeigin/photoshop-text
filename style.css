@@ -368,6 +368,95 @@ body.isExpert .regularOnly {
   text-align: right;
 }
 
+ .changelogLink {
+  margin-left: 10px;
+  color: rgba(255,255,255,0.92);
+  text-decoration: underline;
+ }
+
+ .modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: grid;
+  place-items: center;
+  z-index: 9999;
+  padding: 16px;
+ }
+
+ .modalOverlay[hidden] {
+  display: none !important;
+ }
+
+ .modal {
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(70vh, 680px);
+  background: rgba(18,18,22,0.98);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 20px 70px rgba(0,0,0,0.6);
+  padding: 14px;
+  position: relative;
+  overflow: hidden;
+ }
+
+ .modalClose {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.9);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+ }
+
+ .modalTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.92);
+  margin-bottom: 10px;
+  padding-right: 40px;
+ }
+
+ .modalBody {
+  margin: 0;
+  overflow: auto;
+  max-height: calc(70vh - 90px);
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.86);
+ }
+
+ .modalBody h1,
+ .modalBody h2,
+ .modalBody h3,
+ .modalBody h4,
+ .modalBody h5,
+ .modalBody h6 {
+  margin: 12px 0 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.92);
+ }
+
+ .modalBody p {
+  margin: 6px 0;
+ }
+
+ .modalBody ul {
+  margin: 6px 0 10px 18px;
+  padding: 0;
+ }
+
+ .modalBody li {
+  margin: 3px 0;
+ }
+
 .previewWrap {
   background: linear-gradient(180deg, rgba(255,255,255,0.04), transparent);
   border: 1px solid var(--border);

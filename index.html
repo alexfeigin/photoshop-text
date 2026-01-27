@@ -143,7 +143,10 @@
           <div id="status" class="status"></div>
         </div>
 
-        <div id="appVersion" class="appVersion"></div>
+        <div id="appVersion" class="appVersion">
+          <span id="appVersionText"></span>
+          <a id="changelogLink" class="changelogLink" href="#">Change log</a>
+        </div>
       </div>
 
       <div class="previewWrap">
@@ -151,6 +154,14 @@
           <img id="referenceImg" class="reference" src="text-sample-no-background.png" alt="reference" />
           <canvas id="canvas" class="canvas"></canvas>
         </div>
+      </div>
+    </div>
+
+    <div id="changelogOverlay" class="modalOverlay" hidden>
+      <div id="changelogModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="changelogTitle">
+        <button id="changelogClose" class="modalClose" type="button" aria-label="Close">×</button>
+        <div id="changelogTitle" class="modalTitle">Change log</div>
+        <div id="changelogBody" class="modalBody"></div>
       </div>
     </div>
 

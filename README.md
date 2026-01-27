@@ -85,6 +85,10 @@ The visual regression test uses Playwright and compares rendered output against 
 
 We use semantic versioning.
 
+Maintainer expectations:
+
+- When you cut a release, you must also update `CHANGELOG.md` with a short, human-readable summary of what changed in that version.
+
 - New feature:
   - Bump the minor version
 - Bugfix:
@@ -100,6 +104,16 @@ Commands:
   - `npm version patch`
 - Major release (manual):
   - `npm version major`
+
+Recommended steps:
+
+1. Update `CHANGELOG.md`
+2. Run tests:
+   - `npm test`
+3. Commit your changes
+4. Bump the version using `npm version <major|minor|patch>` (this will run tests and update `src/version.js`)
+5. Push commit + tags:
+   - `git push origin master --follow-tags`
 
 Then push commit + tags:
 
