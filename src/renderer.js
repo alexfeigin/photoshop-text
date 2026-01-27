@@ -139,6 +139,7 @@ export function renderToCanvas({
   scaleY,
   alignment,
   padding,
+  arcPct,
   showBg,
   bgColor,
   layers,
@@ -522,10 +523,105 @@ export function renderToCanvas({
         ctx.restore();
       }
       continue;
+
     }
   }
 
   ctx.restore();
+
+  const arc = clamp(Number(arcPct) || 0, 0, 100);
+  if (arc > 0) {
+    const w0 = canvas.width;
+    const h0 = canvas.height;
+    const src = document.createElement('canvas');
+    src.width = w0;
+    src.height = h0;
+    const sctx2 = src.getContext('2d');
+    if (sctx2) {
+      sctx2.drawImage(canvas, 0, 0);
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, w0, h0);
+
+      // Photoshop-like Arc: map the rectangle onto a circular arc by placing/rotating vertical slices.
+      // We keep the output canvas size and shift down by the sagitta to reduce clipping.
+      const s = (arc / 100) * h0 * 0.35;
+      const halfW = w0 / 2;
+      const denom = Math.max(1e-6, 8 * s);
+      const R = (w0 * w0) / denom + s / 2;
+      const d = R - s;
+      const baseY = s;
+
+      const srcImg = sctx2.getImageData(0, 0, w0, h0);
+      const outImg = ctx.createImageData(w0, h0);
+      const sd = srcImg.data;
+      const od = outImg.data;
+
+      function sampleBilinear(x, y, outIdx) {
+        // Sample at subpixel coordinate (x,y) in source image space.
+        if (x < 0 || y < 0 || x >= w0 || y >= h0) {
+          od[outIdx] = 0;
+          od[outIdx + 1] = 0;
+          od[outIdx + 2] = 0;
+          od[outIdx + 3] = 0;
+          return;
+        }
+
+        const x0 = Math.floor(x);
+        const y0 = Math.floor(y);
+        const x1 = Math.min(w0 - 1, x0 + 1);
+        const y1 = Math.min(h0 - 1, y0 + 1);
+        const tx = x - x0;
+        const ty = y - y0;
+
+        const i00 = (y0 * w0 + x0) * 4;
+        const i10 = (y0 * w0 + x1) * 4;
+        const i01 = (y1 * w0 + x0) * 4;
+        const i11 = (y1 * w0 + x1) * 4;
+
+        const w00 = (1 - tx) * (1 - ty);
+        const w10 = tx * (1 - ty);
+        const w01 = (1 - tx) * ty;
+        const w11 = tx * ty;
+
+        od[outIdx] = sd[i00] * w00 + sd[i10] * w10 + sd[i01] * w01 + sd[i11] * w11;
+        od[outIdx + 1] = sd[i00 + 1] * w00 + sd[i10 + 1] * w10 + sd[i01 + 1] * w01 + sd[i11 + 1] * w11;
+        od[outIdx + 2] = sd[i00 + 2] * w00 + sd[i10 + 2] * w10 + sd[i01 + 2] * w01 + sd[i11 + 2] * w11;
+        od[outIdx + 3] = sd[i00 + 3] * w00 + sd[i10 + 3] * w10 + sd[i01 + 3] * w01 + sd[i11 + 3] * w11;
+      }
+
+      for (let x = 0; x < w0; x++) {
+        const xc = x + 0.5;
+        const xC = xc - halfW;
+        const sinT = Math.max(-0.999999, Math.min(0.999999, xC / R));
+        const theta = Math.asin(sinT);
+        const cosT = Math.cos(theta);
+        const sinTheta = sinT; // sin(theta)
+        const yArc = d - R * Math.cos(theta);
+
+        const tx = halfW + xC;
+        const ty = baseY + yArc + h0 / 2;
+
+        for (let y = 0; y < h0; y++) {
+          const yc = y + 0.5;
+          const dx = xc - tx;
+          const dy = yc - ty;
+
+          // Inverse rotate the destination point back into the source slice frame.
+          const ux = cosT * dx + sinTheta * dy;
+          const uy = -sinTheta * dx + cosT * dy;
+
+          const srcX = xc + ux;
+          const srcY = h0 / 2 + uy;
+
+          const outIdx = (y * w0 + x) * 4;
+          sampleBilinear(srcX, srcY, outIdx);
+        }
+      }
+
+      ctx.putImageData(outImg, 0, 0);
+    }
+  }
 
   return { width: canvas.width, height: canvas.height };
 }

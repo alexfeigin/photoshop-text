@@ -18,6 +18,7 @@ function getEls() {
     presetSelect: document.getElementById('presetSelect'),
     expertPresetSelect: document.getElementById('expertPresetSelect'),
     textInput: document.getElementById('textInput'),
+    arcPct: document.getElementById('arcPct'),
     fontSize: document.getElementById('fontSize'),
     scaleX: document.getElementById('scaleX'),
     scaleY: document.getElementById('scaleY'),
@@ -117,6 +118,7 @@ async function exportPng({ els, state, style }) {
   const scaleY = clampScale(els.scaleY?.value);
   const padding = clamp(Number(els.padding.value) || 24, 0, 300);
   const alignment = els.align.value;
+  const arcPct = clamp(Number(els.arcPct?.value) || 0, 0, 100);
   const scale = clamp(Number(els.exportScale.value) || 2, 1, 4);
 
   const exportCanvas = document.createElement('canvas');
@@ -128,6 +130,7 @@ async function exportPng({ els, state, style }) {
     scaleY,
     alignment,
     padding,
+    arcPct,
     showBg: false,
     layers: state.layers,
     scale,
@@ -184,6 +187,7 @@ async function init() {
         version: 1,
         ui: {
           text: els.textInput?.value ?? '',
+          arcPct: els.arcPct?.value ?? '',
           fontSize: els.fontSize?.value ?? '',
           scaleX: els.scaleX?.value ?? '',
           scaleY: els.scaleY?.value ?? '',
@@ -205,6 +209,7 @@ async function init() {
 
     if (session.ui && typeof session.ui === 'object') {
       if (typeof session.ui.text === 'string' && els.textInput) els.textInput.value = session.ui.text;
+      if (typeof session.ui.arcPct === 'string' && els.arcPct) els.arcPct.value = session.ui.arcPct;
       if (typeof session.ui.fontSize === 'string' && els.fontSize) els.fontSize.value = session.ui.fontSize;
       if (typeof session.ui.scaleX === 'string' && els.scaleX) els.scaleX.value = session.ui.scaleX;
       if (typeof session.ui.scaleY === 'string' && els.scaleY) els.scaleY.value = session.ui.scaleY;
@@ -231,6 +236,7 @@ async function init() {
     const padding = clamp(Number(els.padding.value) || 24, 0, 300);
     const alignment = els.align.value;
     const showBg = els.showBg.checked;
+    const arcPct = clamp(Number(els.arcPct?.value) || 0, 0, 100);
 
     renderToCanvas({
       canvas: els.canvas,
@@ -240,6 +246,7 @@ async function init() {
       scaleY,
       alignment,
       padding,
+      arcPct,
       showBg,
       bgColor: '#7D2ED7',
       layers: state.layers,
@@ -315,6 +322,7 @@ async function init() {
     const scaleY = clampScale(opts.scaleY);
     const padding = clamp(Number(opts.padding) || 24, 0, 300);
     const alignment = opts.alignment || 'center';
+    const arcPct = clamp(Number(opts.arcPct) || 0, 0, 100);
     const scale = clamp(Number(opts.scale) || 1, 1, 8);
     const width = typeof opts.width === 'number' ? opts.width : undefined;
     const height = typeof opts.height === 'number' ? opts.height : undefined;
@@ -328,6 +336,7 @@ async function init() {
       scaleY,
       alignment,
       padding,
+      arcPct,
       showBg: Boolean(opts.showBg),
       bgColor: typeof opts.bgColor === 'string' ? opts.bgColor : undefined,
       layers: Array.isArray(opts.layers) ? opts.layers : state.layers,

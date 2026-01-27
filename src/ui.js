@@ -316,6 +316,11 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
     scheduleRender();
   });
 
+  els.arcPct?.addEventListener('input', () => {
+    onStateChange();
+    scheduleRender();
+  });
+
   els.loadPresetBtn?.addEventListener('click', async () => {
     try {
       setStatus('Loading preset…');
