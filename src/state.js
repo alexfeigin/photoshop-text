@@ -109,7 +109,7 @@ export function createLayer(type) {
   throw new Error(`Unknown layer type: ${type}`);
 }
 
-export function createDefaultState({ fillColor }) {
+export function createDefaultState({ fillColor } = {}) {
   const fill = createLayer(LAYER_TYPES.fill);
   fill.params.color = fillColor || '#000000';
   return {

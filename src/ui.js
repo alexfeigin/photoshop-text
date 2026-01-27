@@ -1,30 +1,17 @@
 import {
   LAYER_TYPES,
   addLayer,
-  getGradientMidColor,
   getLayerById,
   moveLayer,
   removeLayer,
   selectLayer,
-  setGradientMidColor,
   switchBaseFillType,
   updateLayer,
 } from './state.js';
 import { exportConfig, importConfig } from './serialize.js';
 import { DEFAULT_PRESET_URL } from './preset.js';
 
-function syncQuickFillToBaseLayer({ els, state }) {
-  if (!els.fillColor) return;
-  const gfill = state.layers.find((l) => l && l.type === LAYER_TYPES.gradientFill);
-  if (gfill) {
-    setGradientMidColor(gfill.params, els.fillColor.value);
-    return;
-  }
-  const fill = state.layers.find((l) => l && l.type === LAYER_TYPES.fill);
-  if (fill) {
-    fill.params.color = els.fillColor.value;
-  }
-}
+const IMPORT_FALLBACK_COLOR = '#000000';
 
 function clampPct(n) {
   const v = Number(n);
@@ -318,20 +305,6 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
   function applyImportedConfig(next) {
     state.layers = next.layers;
     state.selectedLayerId = next.selectedLayerId;
-
-    const gfill = state.layers.find((l) => l.type === LAYER_TYPES.gradientFill);
-    if (gfill && els.fillColor) {
-      const mid = getGradientMidColor(gfill.params, els.fillColor.value);
-      els.fillColor.value = mid;
-      if (els.fillColorHex) els.fillColorHex.value = mid;
-    }
-    const fill = state.layers.find((l) => l.type === LAYER_TYPES.fill);
-    if (!gfill && fill && els.fillColor) {
-      els.fillColor.value = fill.params.color;
-      if (els.fillColorHex) els.fillColorHex.value = fill.params.color;
-    }
-
-    syncQuickFillToBaseLayer({ els, state });
     onStateChange();
     rerenderUI();
     scheduleRender();
@@ -358,7 +331,7 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
         return;
       }
       const txt = await res.text();
-      const next = importConfig(txt, els.fillColor?.value);
+      const next = importConfig(txt, IMPORT_FALLBACK_COLOR);
       applyImportedConfig(next);
       setStatus('Loaded preset.');
       setTimeout(() => setStatus(''), 1500);
@@ -379,8 +352,7 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
 
     const curStops = normalizeStopsForEdit(layer.params);
     if (action === 'addStop') {
-      const midColor = getGradientMidColor(layer.params, els.fillColor?.value || '#000000');
-      curStops.push({ offsetPct: 50, color: midColor });
+      curStops.push({ offsetPct: 50, color: IMPORT_FALLBACK_COLOR });
       updateLayer(state, id, { params: { stops: curStops } });
       onStateChange();
       rerenderUI();
@@ -413,26 +385,6 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
     scheduleRender();
   });
 
-  if (els.fillColor && els.fillColorHex) {
-    els.fillColorHex.value = els.fillColor.value;
-  }
-
-  els.fillColor?.addEventListener('input', () => {
-    if (els.fillColorHex) els.fillColorHex.value = els.fillColor.value;
-    syncQuickFillToBaseLayer({ els, state });
-    onStateChange();
-    scheduleRender();
-  });
-
-  els.fillColorHex?.addEventListener('input', () => {
-    const norm = normalizeHexColor(els.fillColorHex.value);
-    if (!norm) return;
-    els.fillColorHex.value = norm;
-    if (els.fillColor) els.fillColor.value = norm;
-    syncQuickFillToBaseLayer({ els, state });
-    onStateChange();
-    scheduleRender();
-  });
   els.align?.addEventListener('change', () => {
     onStateChange();
     scheduleRender();
@@ -551,16 +503,6 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
         updateLayer(state, id, { params: { [hexFor]: norm } });
       }
       onStateChange();
-
-      if (layer.type === LAYER_TYPES.fill && hexFor === 'color' && els.fillColorHex && els.fillColor) {
-        els.fillColor.value = norm;
-        els.fillColorHex.value = norm;
-      }
-      if (layer.type === LAYER_TYPES.gradientFill && els.fillColorHex && els.fillColor) {
-        const mid = getGradientMidColor(getLayerById(state, id)?.params, norm);
-        els.fillColor.value = mid;
-        els.fillColorHex.value = mid;
-      }
       scheduleRender();
       return;
     }
@@ -611,18 +553,6 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
       const hexInput = els.layerEditorBody.querySelector(`input[type="text"][data-hex-for="${CSS.escape(field)}"]`);
       if (hexInput) hexInput.value = hex;
     }
-
-    // Keep the top-level fill color control synced to base layer edits.
-    if (layer.type === LAYER_TYPES.fill && field === 'color' && els.fillColor && els.fillColorHex) {
-      els.fillColor.value = String(val);
-      els.fillColorHex.value = String(val);
-    }
-
-    if (layer.type === LAYER_TYPES.gradientFill && els.fillColor && els.fillColorHex) {
-      const mid = getGradientMidColor(getLayerById(state, id)?.params, els.fillColor.value);
-      els.fillColor.value = mid;
-      els.fillColorHex.value = mid;
-    }
     scheduleRender();
   });
 
@@ -643,8 +573,7 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
 
     if (field === 'baseFillType') {
       const nextType = target.value;
-      switchBaseFillType(state, nextType, els.fillColor?.value);
-      syncQuickFillToBaseLayer({ els, state });
+      switchBaseFillType(state, nextType, IMPORT_FALLBACK_COLOR);
       onStateChange();
       rerenderUI();
       scheduleRender();
@@ -662,7 +591,7 @@ export function bindUI({ els, state, scheduleRender, setStatus }) {
     if (!file) return;
     try {
       const txt = await file.text();
-      const next = importConfig(txt, els.fillColor?.value);
+      const next = importConfig(txt, IMPORT_FALLBACK_COLOR);
       applyImportedConfig(next);
       setStatus(`Imported: ${file.name}`);
       setTimeout(() => setStatus(''), 1500);

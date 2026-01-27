@@ -20,8 +20,6 @@ function getEls() {
     fontSize: document.getElementById('fontSize'),
     scaleX: document.getElementById('scaleX'),
     scaleY: document.getElementById('scaleY'),
-    fillColor: document.getElementById('fillColor'),
-    fillColorHex: document.getElementById('fillColorHex'),
     align: document.getElementById('align'),
     exportScale: document.getElementById('exportScale'),
     padding: document.getElementById('padding'),
@@ -58,6 +56,7 @@ function setModeClass(expert) {
 }
 
 const DEFAULT_REGULAR_PRESET_URL = PRESETS[0]?.url || DEFAULT_PRESET_URL;
+const IMPORT_FALLBACK_COLOR = '#000000';
 
 async function loadPresetIntoState({ url, els, state, schedulePersist }) {
   const res = await fetch(url, { cache: 'no-store' });
@@ -66,21 +65,9 @@ async function loadPresetIntoState({ url, els, state, schedulePersist }) {
     throw new Error(`Could not load preset (${details}): ${res.url}`);
   }
   const txt = await res.text();
-  const next = importConfig(txt, els.fillColor?.value);
+  const next = importConfig(txt, IMPORT_FALLBACK_COLOR);
   state.layers = next.layers;
   state.selectedLayerId = next.selectedLayerId;
-
-  const gfill = state.layers.find((l) => l.type === 'gradientFill');
-  if (gfill && els.fillColor) {
-    const mid = getGradientMidColor(gfill.params, els.fillColor.value);
-    els.fillColor.value = mid;
-    if (els.fillColorHex) els.fillColorHex.value = mid;
-  }
-  const fill = state.layers.find((l) => l.type === 'fill');
-  if (!gfill && fill && els.fillColor) {
-    els.fillColor.value = fill.params.color;
-    if (els.fillColorHex) els.fillColorHex.value = fill.params.color;
-  }
   schedulePersist?.();
 }
 
@@ -173,7 +160,7 @@ async function init() {
   };
 
   const els = getEls();
-  const state = createDefaultState({ fillColor: els.fillColor?.value || '#000000' });
+  const state = createDefaultState();
 
   let persistTimer = null;
   function schedulePersist() {
@@ -197,7 +184,6 @@ async function init() {
           alignment: els.align?.value ?? 'center',
           padding: els.padding?.value ?? '',
           showBg: Boolean(els.showBg?.checked),
-          fillColor: els.fillColor?.value ?? '',
         },
         layers: layersForPersist,
         selectedLayerId: state.selectedLayerId,
@@ -207,7 +193,7 @@ async function init() {
 
   const session = loadSessionState();
   if (expertMode && session && Array.isArray(session.layers)) {
-    const next = importConfig(JSON.stringify({ version: 1, layers: session.layers }), els.fillColor?.value);
+    const next = importConfig(JSON.stringify({ version: 1, layers: session.layers }), IMPORT_FALLBACK_COLOR);
     state.layers = next.layers;
     state.selectedLayerId = typeof session.selectedLayerId === 'string' ? session.selectedLayerId : next.selectedLayerId;
 
@@ -219,18 +205,6 @@ async function init() {
       if (typeof session.ui.alignment === 'string' && els.align) els.align.value = session.ui.alignment;
       if (typeof session.ui.padding === 'string' && els.padding) els.padding.value = session.ui.padding;
       if (typeof session.ui.showBg === 'boolean' && els.showBg) els.showBg.checked = session.ui.showBg;
-    }
-
-    const gfill = state.layers.find((l) => l.type === 'gradientFill');
-    if (gfill && els.fillColor) {
-      const mid = getGradientMidColor(gfill.params, els.fillColor.value);
-      els.fillColor.value = mid;
-      if (els.fillColorHex) els.fillColorHex.value = mid;
-    }
-    const fill = state.layers.find((l) => l.type === 'fill');
-    if (!gfill && fill && els.fillColor) {
-      els.fillColor.value = fill.params.color;
-      if (els.fillColorHex) els.fillColorHex.value = fill.params.color;
     }
 
     schedulePersist();

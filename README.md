@@ -81,6 +81,31 @@ Notes:
 
 The visual regression test uses Playwright and compares rendered output against a reference PNG.
 
+## Release / Versioning
+
+We use semantic versioning.
+
+- New feature:
+  - Bump the minor version
+- Bugfix:
+  - Bump the patch version
+- Major version:
+  - Manually decided
+
+Commands:
+
+- Feature release:
+  - `npm version minor`
+- Bugfix release:
+  - `npm version patch`
+- Major release (manual):
+  - `npm version major`
+
+Then push commit + tags:
+
+- `git push`
+- `git push --tags`
+
 ## Link preview (WhatsApp / social tiles)
 
 The app sets Open Graph / Twitter metadata in `index.html` so that when you paste the URL into services that unfurl links (WhatsApp, Slack, etc.), it shows a rich preview tile (title/description/image).

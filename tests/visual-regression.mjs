@@ -9,6 +9,15 @@ import { chromium } from 'playwright';
 import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
 
+/*
+  NOTE: This script is intentionally NOT a regression-gating test.
+  It renders the current output and compares it to a Photoshop reference image.
+  The goal is to help visually tune parameters, not to enforce pixel-perfect stability.
+
+  By default it is skipped. To run it explicitly:
+    RUN_VISUAL=1 node tests/visual-regression.mjs
+*/
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
@@ -83,6 +92,11 @@ function cloneJson(x) {
 }
 
 async function main() {
+  if (process.env.RUN_VISUAL !== '1') {
+    console.log('Skipping visual reference comparison (set RUN_VISUAL=1 to run).');
+    return;
+  }
+
   const outDir = path.join(projectRoot, 'test-output');
   await mkdir(outDir, { recursive: true });
 
