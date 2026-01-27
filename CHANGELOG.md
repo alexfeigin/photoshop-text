@@ -1,5 +1,3 @@
-# Changelog
-
 ## v0.4.0
 
 - Added in-app Change log modal (with Markdown rendering)
