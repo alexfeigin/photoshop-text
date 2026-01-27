@@ -2,6 +2,26 @@
 
 This is a browser-based text rendering tool that applies a Photoshop-like effect stack (layers) and exports a **transparent PNG**.
 
+## Deployed
+
+- Default UI:
+  - https://alexfeigin.github.io/text/
+- Expert mode:
+  - https://alexfeigin.github.io/text/?expert=yes
+
+## Run locally
+
+This is a static site (no build step required). You just need to serve the repo with a local HTTP server (opening `index.html` via `file://` may not work due to browser restrictions).
+
+- Using Python:
+  - `python3 -m http.server 5173`
+  - Open:
+    - http://localhost:5173/
+    - http://localhost:5173/?expert=yes
+
+- Run tests:
+  - `npm test`
+
 ## Modes
 
 The app has two UI modes:
@@ -60,3 +80,7 @@ Notes:
   - `npm test`
 
 The visual regression test uses Playwright and compares rendered output against a reference PNG.
+
+## Link preview (WhatsApp / social tiles)
+
+The app sets Open Graph / Twitter metadata in `index.html` so that when you paste the URL into services that unfurl links (WhatsApp, Slack, etc.), it shows a rich preview tile (title/description/image).

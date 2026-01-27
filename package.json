@@ -1,8 +1,10 @@
 {
   "name": "photoshop-text",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
+    "generate:og-image": "node generate-og-image.mjs",
     "test:visual": "node tests/visual-regression.mjs",
     "test:gradient-stops": "node tests/gradient-stops.mjs",
     "test": "npm run test:visual && npm run test:gradient-stops"
