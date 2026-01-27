@@ -3,6 +3,7 @@ import { renderToCanvas } from './renderer.js';
 import { bindUI } from './ui.js';
 import { importConfig } from './serialize.js';
 import { DEFAULT_PRESET_URL, PRESETS } from './preset.js';
+import { APP_VERSION } from './version.js';
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -35,6 +36,7 @@ function getEls() {
     exportBtn: document.getElementById('exportBtn'),
     downloadLink: document.getElementById('downloadLink'),
     status: document.getElementById('status'),
+    appVersion: document.getElementById('appVersion'),
     canvas: document.getElementById('canvas'),
     referenceImg: document.getElementById('referenceImg'),
   };
@@ -161,6 +163,10 @@ async function init() {
 
   const els = getEls();
   const state = createDefaultState();
+
+  if (els.appVersion) {
+    els.appVersion.textContent = `v${APP_VERSION}`;
+  }
 
   let persistTimer = null;
   function schedulePersist() {

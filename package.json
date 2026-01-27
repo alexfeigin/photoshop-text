@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "generate:og-image": "node generate-og-image.mjs",
+    "sync:version": "node scripts/sync-version.mjs",
+    "preversion": "npm test",
+    "version": "npm run sync:version && git add -A",
     "test:visual": "node tests/visual-regression.mjs",
     "test:gradient-stops": "node tests/gradient-stops.mjs",
     "test:ui-load": "node tests/ui-load.mjs",
