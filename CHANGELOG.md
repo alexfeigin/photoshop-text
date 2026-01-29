@@ -1,3 +1,7 @@
+## v0.5.1
+
+- Fixed: regular mode now persists the text input in session storage (survives reload and switching between regular/expert mode)
+
 ## v0.5.0
 
 - Larger preview area

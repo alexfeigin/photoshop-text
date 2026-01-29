@@ -317,24 +317,23 @@ async function init() {
     }, 120);
   }
 
+  function applySessionUi(sessionUi) {
+    if (!sessionUi || typeof sessionUi !== 'object') return;
+    if (typeof sessionUi.text === 'string' && els.textInput) els.textInput.value = sessionUi.text;
+    if (typeof sessionUi.arcPct === 'string' && els.arcPct) els.arcPct.value = sessionUi.arcPct;
+    if (typeof sessionUi.fontSize === 'string' && els.fontSize) els.fontSize.value = sessionUi.fontSize;
+    if (typeof sessionUi.scaleX === 'string' && els.scaleX) els.scaleX.value = sessionUi.scaleX;
+    if (typeof sessionUi.scaleY === 'string' && els.scaleY) els.scaleY.value = sessionUi.scaleY;
+    if (typeof sessionUi.alignment === 'string' && els.align) els.align.value = sessionUi.alignment;
+    if (typeof sessionUi.padding === 'string' && els.padding) els.padding.value = sessionUi.padding;
+    if (typeof sessionUi.showBg === 'boolean' && els.showBg) els.showBg.checked = sessionUi.showBg;
+  }
+
   const session = loadSessionState();
   if (expertMode && session && Array.isArray(session.layers)) {
     const next = importConfig(JSON.stringify({ version: 1, layers: session.layers }), IMPORT_FALLBACK_COLOR);
     state.layers = next.layers;
     state.selectedLayerId = typeof session.selectedLayerId === 'string' ? session.selectedLayerId : next.selectedLayerId;
-
-    if (session.ui && typeof session.ui === 'object') {
-      if (typeof session.ui.text === 'string' && els.textInput) els.textInput.value = session.ui.text;
-      if (typeof session.ui.arcPct === 'string' && els.arcPct) els.arcPct.value = session.ui.arcPct;
-      if (typeof session.ui.fontSize === 'string' && els.fontSize) els.fontSize.value = session.ui.fontSize;
-      if (typeof session.ui.scaleX === 'string' && els.scaleX) els.scaleX.value = session.ui.scaleX;
-      if (typeof session.ui.scaleY === 'string' && els.scaleY) els.scaleY.value = session.ui.scaleY;
-      if (typeof session.ui.alignment === 'string' && els.align) els.align.value = session.ui.alignment;
-      if (typeof session.ui.padding === 'string' && els.padding) els.padding.value = session.ui.padding;
-      if (typeof session.ui.showBg === 'boolean' && els.showBg) els.showBg.checked = session.ui.showBg;
-    }
-
-    schedulePersist();
   } else {
     const initialPresetUrl = expertMode ? DEFAULT_PRESET_URL : DEFAULT_REGULAR_PRESET_URL;
     try {
@@ -343,6 +342,10 @@ async function init() {
       console.warn('Could not load sample preset:', e);
     }
   }
+
+  // UI state (including text) should persist across modes.
+  applySessionUi(session?.ui);
+  schedulePersist();
 
   let renderQueued = false;
 
