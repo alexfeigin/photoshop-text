@@ -540,20 +540,50 @@ export function renderToCanvas({
     if (sctx2) {
       sctx2.drawImage(canvas, 0, 0);
 
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, w0, h0);
-
       // Photoshop-like Arc: map the rectangle onto a circular arc by placing/rotating vertical slices.
-      // We keep the output canvas size and shift down by the sagitta to reduce clipping.
+      // IMPORTANT: allocate extra output height so the arc warp can't clip pixels (preview + export).
       const s = (arc / 100) * h0 * 0.35;
       const halfW = w0 / 2;
       const denom = Math.max(1e-6, 8 * s);
       const R = (w0 * w0) / denom + s / 2;
       const d = R - s;
-      const baseY = s;
+
+      // Estimate the vertical displacement range caused by the arc.
+      // yArc = d - R*cos(theta), theta depends on x.
+      let minArc = Infinity;
+      let maxArc = -Infinity;
+      const sampleStep = Math.max(1, Math.floor(w0 / 512));
+      for (let x = 0; x < w0; x += sampleStep) {
+        const xc = x + 0.5;
+        const xC = xc - halfW;
+        const sinT = Math.max(-0.999999, Math.min(0.999999, xC / R));
+        const theta = Math.asin(sinT);
+        const yArc = d - R * Math.cos(theta);
+        minArc = Math.min(minArc, yArc);
+        maxArc = Math.max(maxArc, yArc);
+      }
+      if (!Number.isFinite(minArc) || !Number.isFinite(maxArc)) {
+        minArc = -Math.abs(s);
+        maxArc = 0;
+      }
+
+      const arcRange = Math.max(0, maxArc - minArc);
+      const h1 = h0 + Math.ceil(arcRange);
+      const midArc = (minArc + maxArc) / 2;
+
+      // Resize output canvas; this clears it.
+      canvas.width = w0;
+      canvas.height = h1;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, w0, h1);
+
+      if (showBg) {
+        ctx.fillStyle = bgColor || '#7D2ED7';
+        ctx.fillRect(0, 0, w0, h1);
+      }
 
       const srcImg = sctx2.getImageData(0, 0, w0, h0);
-      const outImg = ctx.createImageData(w0, h0);
+      const outImg = ctx.createImageData(w0, h1);
       const sd = srcImg.data;
       const od = outImg.data;
 
@@ -600,9 +630,9 @@ export function renderToCanvas({
         const yArc = d - R * Math.cos(theta);
 
         const tx = halfW + xC;
-        const ty = baseY + yArc + h0 / 2;
+        const ty = h1 / 2 + (yArc - midArc);
 
-        for (let y = 0; y < h0; y++) {
+        for (let y = 0; y < h1; y++) {
           const yc = y + 0.5;
           const dx = xc - tx;
           const dy = yc - ty;

@@ -44,6 +44,7 @@ function getEls() {
     changelogModal: document.getElementById('changelogModal'),
     changelogClose: document.getElementById('changelogClose'),
     changelogBody: document.getElementById('changelogBody'),
+    preview: document.getElementById('preview'),
     canvas: document.getElementById('canvas'),
     referenceImg: document.getElementById('referenceImg'),
   };
@@ -344,6 +345,28 @@ async function init() {
   }
 
   let renderQueued = false;
+
+  function fitPreviewCanvas() {
+    if (!els.preview || !els.canvas) return;
+
+    const previewRect = els.preview.getBoundingClientRect();
+    const cs = getComputedStyle(els.preview);
+
+    const padL = Number.parseFloat(cs.paddingLeft) || 0;
+    const padR = Number.parseFloat(cs.paddingRight) || 0;
+    const padT = Number.parseFloat(cs.paddingTop) || 0;
+    const padB = Number.parseFloat(cs.paddingBottom) || 0;
+
+    const innerW = Math.max(1, previewRect.width - padL - padR);
+    const innerH = Math.max(1, previewRect.height - padT - padB);
+
+    const contentW = Math.max(1, els.canvas.width);
+    const contentH = Math.max(1, els.canvas.height);
+
+    const scale = Math.min(innerW / contentW, innerH / contentH, 1);
+    els.canvas.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  }
+
   function render() {
     const fontSize = clamp(Number(els.fontSize.value) || 143, 8, 500);
     const scaleX = clampScale(els.scaleX?.value);
@@ -368,6 +391,8 @@ async function init() {
       scale: 1,
       style,
     });
+
+    fitPreviewCanvas();
   }
 
   function scheduleRender() {
@@ -377,6 +402,13 @@ async function init() {
       renderQueued = false;
       render();
     });
+  }
+
+  if (typeof ResizeObserver !== 'undefined' && els.preview) {
+    const ro = new ResizeObserver(() => {
+      fitPreviewCanvas();
+    });
+    ro.observe(els.preview);
   }
 
   bindUI({

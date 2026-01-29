@@ -10,8 +10,9 @@
     "version": "npm run sync:version && git add -A",
     "test:visual": "node tests/visual-regression.mjs",
     "test:gradient-stops": "node tests/gradient-stops.mjs",
+    "test:preview-fit": "node tests/preview-fit.mjs",
     "test:ui-load": "node tests/ui-load.mjs",
-    "test": "npm run test:gradient-stops && npm run test:ui-load"
+    "test": "npm run test:gradient-stops && npm run test:ui-load && npm run test:preview-fit"
   },
   "devDependencies": {
     "pixelmatch": "^5.3.0",

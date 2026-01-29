@@ -1,3 +1,10 @@
+## v0.5.0
+
+- Larger preview area
+- Fixed Arc % warp clipping by expanding render canvas height as needed (preview + export)
+- Preview now scales rendered output to fit within the checkered preview area (without changing render output)
+- Added Playwright smoke test to ensure long, 100% arced text stays fully visible in the preview
+
 ## v0.4.0
 
 - Added in-app Change log modal (with Markdown rendering)

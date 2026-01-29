@@ -89,11 +89,11 @@ Maintainer expectations:
 
 - When you cut a release, you must also update `CHANGELOG.md` with a short, human-readable summary of what changed in that version.
 
-- New feature:
-  - Bump the minor version
-- Bugfix:
-  - Bump the patch version
-- Major version:
+- Feature release:
+  - Always bump the minor version
+- Bugfix release:
+  - Always bump the patch version
+- Major release:
   - Manually decided
 
 Commands:
