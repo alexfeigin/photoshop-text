@@ -95,7 +95,7 @@ const SESSION_KEY = 'photoshop-text.session.v1';
 
 function loadSessionState() {
   try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
+    const raw = localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
@@ -107,7 +107,9 @@ function loadSessionState() {
 
 function saveSessionState(payload) {
   try {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(payload));
+    const raw = JSON.stringify(payload);
+    localStorage.setItem(SESSION_KEY, raw);
+    sessionStorage.setItem(SESSION_KEY, raw);
   } catch {
     // ignore
   }

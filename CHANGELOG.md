@@ -1,3 +1,7 @@
+## v0.5.3
+
+- Fixed: session state now persists across closing/reopening the tab (state is stored in localStorage)
+
 ## v0.5.2
 
 - Fixed: regular mode now remembers the selected preset (survives reload and switching between regular/expert mode)
