@@ -68,6 +68,11 @@ function setModeClass(expert) {
 const DEFAULT_REGULAR_PRESET_URL = PRESETS[0]?.url || DEFAULT_PRESET_URL;
 const IMPORT_FALLBACK_COLOR = '#000000';
 
+function isKnownRegularPresetUrl(url) {
+  if (typeof url !== 'string' || !url) return false;
+  return (PRESETS || []).some((p) => p && p.url === url);
+}
+
 async function loadPresetIntoState({ url, els, state, schedulePersist }) {
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) {
@@ -302,6 +307,7 @@ async function init() {
       saveSessionState({
         version: 1,
         ui: {
+          regularPresetUrl: els.presetSelect?.value ?? '',
           text: els.textInput?.value ?? '',
           arcPct: els.arcPct?.value ?? '',
           fontSize: els.fontSize?.value ?? '',
@@ -319,6 +325,9 @@ async function init() {
 
   function applySessionUi(sessionUi) {
     if (!sessionUi || typeof sessionUi !== 'object') return;
+    if (typeof sessionUi.regularPresetUrl === 'string' && els.presetSelect) {
+      els.presetSelect.value = sessionUi.regularPresetUrl;
+    }
     if (typeof sessionUi.text === 'string' && els.textInput) els.textInput.value = sessionUi.text;
     if (typeof sessionUi.arcPct === 'string' && els.arcPct) els.arcPct.value = sessionUi.arcPct;
     if (typeof sessionUi.fontSize === 'string' && els.fontSize) els.fontSize.value = sessionUi.fontSize;
@@ -335,7 +344,11 @@ async function init() {
     state.layers = next.layers;
     state.selectedLayerId = typeof session.selectedLayerId === 'string' ? session.selectedLayerId : next.selectedLayerId;
   } else {
-    const initialPresetUrl = expertMode ? DEFAULT_PRESET_URL : DEFAULT_REGULAR_PRESET_URL;
+    const sessionRegularUrl =
+      !expertMode && session?.ui && typeof session.ui === 'object' && isKnownRegularPresetUrl(session.ui.regularPresetUrl)
+        ? session.ui.regularPresetUrl
+        : null;
+    const initialPresetUrl = expertMode ? DEFAULT_PRESET_URL : sessionRegularUrl || DEFAULT_REGULAR_PRESET_URL;
     try {
       await loadPresetIntoState({ url: initialPresetUrl, els, state, schedulePersist });
     } catch (e) {
@@ -427,7 +440,10 @@ async function init() {
       .map((p) => `<option value="${p.url}">${p.label}</option>`)
       .join('');
 
-    els.presetSelect.value = DEFAULT_REGULAR_PRESET_URL;
+    const preferred = isKnownRegularPresetUrl(session?.ui?.regularPresetUrl)
+      ? session.ui.regularPresetUrl
+      : DEFAULT_REGULAR_PRESET_URL;
+    els.presetSelect.value = preferred;
     els.presetSelect.addEventListener('change', async () => {
       try {
         setStatus(els, 'Loading preset…');
