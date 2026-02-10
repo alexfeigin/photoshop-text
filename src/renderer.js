@@ -434,47 +434,63 @@ export function renderToCanvas({
       const vx = Math.cos(angle);
       const vy = Math.sin(angle);
 
-      const left = xLeft;
-      const right = xLeft + metrics.width;
-      const top = blockTop;
-      const bottom = blockBottom;
-
-      const corners = [
-        { x: left, y: top },
-        { x: right, y: top },
-        { x: left, y: bottom },
-        { x: right, y: bottom },
-      ];
-
-      let minProj = Infinity;
-      let maxProj = -Infinity;
-      for (const c of corners) {
-        const proj = c.x * vx + c.y * vy;
-        minProj = Math.min(minProj, proj);
-        maxProj = Math.max(maxProj, proj);
-      }
-
-      const range = Math.max(1e-6, maxProj - minProj);
-      const t0 = minProj;
-      const t1 = minProj + range;
-
-      const x0 = vx * t0;
-      const yA = vy * t0;
-      const x1 = vx * t1;
-      const yB = vy * t1;
-
       ctx.save();
       ctx.filter = 'none';
 
-      const g = ctx.createLinearGradient(toUx(x0), toUy(yA), toUx(x1), toUy(yB));
-      for (const s of stops) {
-        g.addColorStop(s.offset, s.color);
+      function fillLineWithGradient(lineText, lineIndex) {
+        const lineWBase = ctx.measureText(lineText).width;
+        const lineWDev = lineWBase * sx;
+
+        const y = y0 + lineIndex * metrics.lineHeight;
+        const top = y - metrics.ascent;
+        const bottom = y + metrics.descent;
+
+        const left =
+          alignment === 'left'
+            ? xLeft
+            : alignment === 'right'
+              ? x - lineWDev
+              : x - lineWDev / 2;
+        const right = left + lineWDev;
+
+        const corners = [
+          { x: left, y: top },
+          { x: right, y: top },
+          { x: left, y: bottom },
+          { x: right, y: bottom },
+        ];
+
+        let minProj = Infinity;
+        let maxProj = -Infinity;
+        for (const c of corners) {
+          const proj = c.x * vx + c.y * vy;
+          minProj = Math.min(minProj, proj);
+          maxProj = Math.max(maxProj, proj);
+        }
+
+        const cx = (left + right) / 2;
+        const cy = (top + bottom) / 2;
+        const cProj = cx * vx + cy * vy;
+
+        const t0 = minProj - cProj;
+        const t1 = maxProj - cProj;
+
+        const x0 = cx + vx * t0;
+        const yA = cy + vy * t0;
+        const x1 = cx + vx * t1;
+        const yB = cy + vy * t1;
+
+        const g = ctx.createLinearGradient(toUx(x0), toUy(yA), toUx(x1), toUy(yB));
+        for (const s of stops) {
+          g.addColorStop(s.offset, s.color);
+        }
+
+        ctx.fillStyle = g;
+        ctx.fillText(lineText, toUx(x), toUy(y));
       }
 
-      ctx.fillStyle = g;
       for (let i = 0; i < lines.length; i++) {
-        const y = y0 + i * metrics.lineHeight;
-        ctx.fillText(lines[i], toUx(x), toUy(y));
+        fillLineWithGradient(lines[i], i);
       }
 
       ctx.restore();

@@ -1,3 +1,7 @@
+## v0.6.0
+
+- Added: Gradient Fill is now applied per line for multiline text
+
 ## v0.5.3
 
 - Fixed: session state now persists across closing/reopening the tab (state is stored in localStorage)
