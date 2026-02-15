@@ -44,7 +44,7 @@ export function exportConfig(state) {
     version: 1,
     layers: (state.layers || []).map((l) => {
       if (!l || typeof l !== 'object') return l;
-      const { locked, ...rest } = l;
+      const { locked: _locked, ...rest } = l;
 
       if (rest.type === LAYER_TYPES.gradientFill) {
         return {
@@ -87,7 +87,7 @@ export function importConfig(jsonText, fillColorFallback) {
   const sanitized = nextLayers
     .filter((l) => l && typeof l.type === 'string' && typeof l.id === 'string')
     .map((l) => {
-      const { locked, ...rest } = l;
+      const { locked: _locked, ...rest } = l;
       return {
         ...rest,
         params:

@@ -1,13 +1,11 @@
-import { createDefaultState, getGradientMidColor } from './state.js';
+import { createDefaultState } from './state.js';
 import { renderToCanvas } from './renderer.js';
 import { bindUI } from './ui.js';
 import { importConfig } from './serialize.js';
 import { DEFAULT_PRESET_URL, PRESETS } from './preset.js';
 import { APP_VERSION } from './version.js';
-
-function clamp(n, min, max) {
-  return Math.max(min, Math.min(max, n));
-}
+import { escapeHtml } from './util/dom.js';
+import { clamp } from './util/math.js';
 
 function ensureFontLoaded(fontFamily) {
   return document.fonts.load(`20px ${fontFamily}`).then(() => document.fonts.ready);
@@ -191,15 +189,6 @@ async function init() {
     els.appVersion.textContent = `v${APP_VERSION}`;
   }
 
-  function escapeHtml(s) {
-    return String(s)
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
-  }
-
   function renderBasicMarkdown(md) {
     const lines = String(md || '').replaceAll('\r\n', '\n').split('\n');
     let html = '';
@@ -302,7 +291,7 @@ async function init() {
 
       const layersForPersist = (state.layers || []).map((l) => {
         if (!l || typeof l !== 'object') return l;
-        const { locked, ...rest } = l;
+        const { locked: _locked, ...rest } = l;
         return rest;
       });
 

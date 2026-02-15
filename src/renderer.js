@@ -1,6 +1,4 @@
-function clamp(n, min, max) {
-  return Math.max(min, Math.min(max, n));
-}
+import { clamp } from './util/math.js';
 
 function splitLines(text) {
   const normalized = (text ?? '').replace(/\r\n/g, '\n');
@@ -267,9 +265,6 @@ export function renderToCanvas({
     resolvedAnchor === 'center'
       ? (canvas.height - metrics.height) / 2 + metrics.ascent + shiftY
       : pad + extraTop + metrics.ascent + shiftY;
-
-  const blockTop = y0 - metrics.ascent;
-  const blockBottom = blockTop + metrics.height;
 
   // Draw in a scaled coordinate space so scaling affects glyphs and effects.
   // We convert device-space coordinates (computed above) into unscaled coordinates for draw calls.

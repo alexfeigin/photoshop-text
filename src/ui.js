@@ -10,6 +10,7 @@ import {
 } from './state.js';
 import { exportConfig, importConfig } from './serialize.js';
 import { DEFAULT_PRESET_URL } from './preset.js';
+import { escapeHtml } from './util/dom.js';
 
 const IMPORT_FALLBACK_COLOR = '#000000';
 
@@ -64,15 +65,6 @@ function renderStopsEditor(p) {
       </div>
     </div>
   `;
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
 }
 
 function normalizeHexColor(input) {

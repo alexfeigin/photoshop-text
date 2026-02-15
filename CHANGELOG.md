@@ -1,3 +1,9 @@
+## v0.6.1
+ 
+ - Fixed: Code cleanup quick wins (deduplicated Playwright test static server helper)
+ - Changed: Centralized common utilities (HTML escaping, clamp)
+ - Changed: Removed unused variables/imports flagged by static analysis
+ 
 ## v0.6.0
 
 - Added: Gradient Fill is now applied per line for multiline text
